@@ -49,6 +49,10 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// *** PENAMBAHAN PENTING: Serve file statis ***
+const publicDirectoryPath = path.join(__dirname, 'public');
+app.use(express.static(publicDirectoryPath));
+
 // --- Konfigurasi Lainnya ---
 const GEMINI_API_URL = process.env.GOOGLE_API_URL; // Model yang valid
 const API_KEY = process.env.GOOGLE_API_KEY;
@@ -240,7 +244,7 @@ async function cleanupFolder(folderPath, sessionId) {
 
 app.get("/", (req, res) => {
     console.log(`[Session ${req.session.id}] Mengakses halaman utama.`);
-    res.sendFile(path.join(__dirname, "index.html"), (err) => {
+    res.sendFile(path.join(__dirname, 'public', "index.html"), (err) => { // Pastikan path ke index.html benar
         if (err) { console.error("Error kirim index.html:", err); if (!res.headersSent) res.status(500).send("Error.");}
     });
 });
@@ -406,6 +410,12 @@ function startServer() {
     if (!fetch) { console.error("FATAL: node-fetch gagal load."); process.exit(1); }
     if (!API_KEY) { console.warn("PERINGATAN: GOOGLE_API_KEY tidak ada."); }
     if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) { console.error("FATAL: SESSION_SECRET tidak aman."); process.exit(1); }
+
+    // **PENAMBAHAN: Pastikan rute catch-all setelah express.static**
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(publicDirectoryPath, 'index.html'));
+    });
+
     app.listen(PORT, () => console.log(`Server berjalan di http://localhost:${PORT}`));
 }
 process.on('unhandledRejection', (reason) => { console.error('!!! Unhandled Rejection:', reason); });
