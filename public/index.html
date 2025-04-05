@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Gemini</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+        rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div style="display: flex; height: 100%; width: 100%;">
         <!-- Chat Column -->
@@ -20,23 +23,42 @@
         <div id="inputColumn">
             <div id="inputArea">
                 <textarea id="userInput"
-                          placeholder="Type your question or snippet code... (Shift+Enter / CTRL+Enter to send message)"
-                          rows="5"></textarea>
+                    placeholder="Type your question or snippet code... (Shift+Enter / CTRL+Enter to send message)"
+                    rows="5"></textarea>
                 <button id="sendButton" onclick="sendMessage()">Send</button>
             </div>
 
             <div id="uploadSectionsContainer">
                 <div id="uploadSection" class="upload-section">
                     <span>Select your project (ZIP):</span>
-                    <input type="file" id="fileInput" accept=".zip"/>
+                    <input type="file" id="fileInput" accept=".zip" />
                     <button id="uploadButton" onclick="uploadZip()">Upload & Analyze ZIP</button>
                 </div>
 
                 <div id="folderSection" class="upload-section">
                     <span>Select your project folder:</span>
-                    <input type="file" id="folderInput" webkitdirectory directory multiple/>
+                    <input type="file" id="folderInput" webkitdirectory directory multiple />
                     <button id="analyzeFolderButton" onclick="analyzeFolder()">Analyze Folder</button>
                 </div>
+
+                <div id="multiFileSection" class="upload-section">
+                    <span>Pilih beberapa file individual (bisa tambah):</span>
+                    <input type="file" id="multiFileInput" multiple
+                        accept=".js,.jsx,.ts,.tsx,.html,.htm,.css,.scss,.sass,.less,.php,.py,.java,.cs,.go,.rb,.swift,.kt,.kts,.c,.cpp,.h,.hpp,.md,.txt,.json,.xml,.yaml,.yml,.sql,.env,.config,.ini,.sh,.bat" />
+
+                    <!-- Area untuk menampilkan file yang dipilih -->
+                    <div id="selectedFilesDisplay" class="selected-files-area">
+                        <strong>File yang akan dianalisis:</strong>
+                        <ul id="selectedFilesList">
+                            <li>Belum ada file dipilih.</li>
+                        </ul>
+                        <button id="clearMultiFileButton" onclick="clearSelectedFiles()"
+                            style="margin-top: 5px; display: none;">Hapus Semua Pilihan</button>
+                    </div>
+
+                    <button id="analyzeMultiFileButton" onclick="analyzeMultipleFiles()">Analisis File Terpilih</button>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -46,4 +68,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

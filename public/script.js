@@ -6,6 +6,13 @@ const folderInput = document.getElementById("folderInput"); // folder
 const analyzeFolderButton = document.getElementById("analyzeFolderButton"); // folder
 const chatbox = document.getElementById("chatbox");
 const loadingIndicator = document.getElementById("loadingIndicator");
+const multiFileInput = document.getElementById("multiFileInput");
+const analyzeMultiFileButton = document.getElementById("analyzeMultiFileButton");
+const selectedFilesList = document.getElementById("selectedFilesList"); // ** BARU **
+const clearMultiFileButton = document.getElementById("clearMultiFileButton"); // ** BARU **
+const selectedFilesDisplay = document.getElementById("selectedFilesDisplay"); // ** BARU (opsional, untuk show/hide) **
+
+let accumulatedFiles = []; // ** BARU **
 
 // Initialize Marked.js with Highlight.js
 marked.setOptions({
@@ -38,7 +45,7 @@ async function sendMessage() {
     setLoading(true); // Disable input fields
 
     try {
-        const response = await fetch("/chat", {
+        const response = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message })
@@ -73,7 +80,7 @@ async function uploadZip() {
         const formData = new FormData();
         formData.append("file", file); // Nama field 'file' harus cocok dg server
 
-        const response = await fetch("/upload", { method: "POST", body: formData });
+        const response = await fetch("/api/upload", { method: "POST", body: formData });
         removeLoadingMessage();
         if (!response.ok) throw await createErrorFromResponse(response, "Gagal unggah ZIP");
 
@@ -109,7 +116,7 @@ async function analyzeFolder() {
             formData.append('folderFiles', files[i], files[i].webkitRelativePath || files[i].name);
         }
 
-        const response = await fetch("/analyze-folder", { method: "POST", body: formData });
+        const response = await fetch("/api/analyze-folder", { method: "POST", body: formData });
         removeLoadingMessage();
         if (!response.ok) throw await createErrorFromResponse(response, "Gagal analisis folder");
 
@@ -124,6 +131,143 @@ async function analyzeFolder() {
         setLoading(false);
     }
 }
+
+// --- Fungsi Baru atau Modifikasi untuk Multi-File ---
+
+// ** BARU: Fungsi untuk menangani pemilihan file baru **
+function handleFileSelection(event) {
+    const newFiles = event.target.files; // FileList baru dari input
+    if (!newFiles || newFiles.length === 0) {
+        return; // Tidak ada file dipilih
+    }
+
+    let filesAddedCount = 0;
+    for (let i = 0; i < newFiles.length; i++) {
+        const newFile = newFiles[i];
+
+        // Cek duplikat sederhana (berdasarkan nama dan ukuran)
+        const isDuplicate = accumulatedFiles.some(existingFile =>
+            existingFile.name === newFile.name && existingFile.size === newFile.size
+            // Anda bisa menambahkan cek lastModified jika perlu: && existingFile.lastModified === newFile.lastModified
+        );
+
+        if (!isDuplicate) {
+            accumulatedFiles.push(newFile);
+            filesAddedCount++;
+        } else {
+            console.log(`File duplikat dilewati: ${newFile.name}`);
+            // Beri tahu pengguna jika perlu
+            // appendMessage("Info", `File "${newFile.name}" sudah ada dalam daftar dan dilewati.`, "bot");
+        }
+    }
+
+    if (filesAddedCount > 0) {
+        console.log(`${filesAddedCount} file baru ditambahkan ke antrian.`);
+    }
+
+    // Perbarui tampilan daftar file
+    updateSelectedFilesDisplay();
+
+    // ** Penting: Kosongkan value input agar event 'change' bisa trigger lagi **
+    // bahkan jika pengguna memilih file yang sama persis
+    event.target.value = "";
+}
+
+// ** BARU: Fungsi untuk memperbarui tampilan daftar file **
+function updateSelectedFilesDisplay() {
+    selectedFilesList.innerHTML = ''; // Kosongkan daftar sebelumnya
+
+    if (accumulatedFiles.length === 0) {
+        selectedFilesList.innerHTML = '<li>Belum ada file dipilih.</li>';
+        clearMultiFileButton.style.display = 'none'; // Sembunyikan tombol clear
+    } else {
+        accumulatedFiles.forEach((file, index) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+             // Opsional: Tambahkan tombol hapus per file
+             const removeBtn = document.createElement('button');
+             removeBtn.textContent = 'x';
+             removeBtn.classList.add('remove-file-btn');
+             removeBtn.title = `Hapus ${file.name}`;
+             removeBtn.onclick = () => removeSelectedFile(index); // Panggil fungsi hapus dgn index
+             listItem.appendChild(removeBtn);
+
+            selectedFilesList.appendChild(listItem);
+        });
+        clearMultiFileButton.style.display = 'inline-block'; // Tampilkan tombol clear
+    }
+     // Juga pastikan tombol analisis diaktifkan/dinonaktifkan
+     analyzeMultiFileButton.disabled = accumulatedFiles.length === 0;
+}
+
+
+// ** BARU: Fungsi untuk menghapus satu file dari daftar **
+function removeSelectedFile(indexToRemove) {
+    if (indexToRemove >= 0 && indexToRemove < accumulatedFiles.length) {
+        const removedFile = accumulatedFiles.splice(indexToRemove, 1); // Hapus dari array
+        console.log(`File dihapus dari antrian: ${removedFile[0]?.name}`);
+        updateSelectedFilesDisplay(); // Perbarui tampilan
+    }
+}
+
+
+// ** BARU: Fungsi untuk menghapus semua file terpilih **
+function clearSelectedFiles() {
+    accumulatedFiles = []; // Kosongkan array
+    multiFileInput.value = ""; // Kosongkan input file juga
+    updateSelectedFilesDisplay(); // Perbarui tampilan
+    console.log("Semua pilihan file dibersihkan.");
+}
+
+async function analyzeMultipleFiles() {
+    // Gunakan accumulatedFiles, bukan multiFileInput.files
+    const filesToAnalyze = accumulatedFiles;
+
+    if (!filesToAnalyze || filesToAnalyze.length === 0 || analyzeMultiFileButton.disabled) {
+        if (!analyzeMultiFileButton.disabled) appendMessage("Bot", "Tidak ada file dalam daftar untuk dianalisis.", "bot error");
+        return;
+    }
+
+    appendMessage("Anda", `Menganalisis ${filesToAnalyze.length} file dari daftar...`, "user");
+    appendMessage("Bot", "Mengunggah & menganalisis file...", "bot", true);
+    setLoading(true); // Ini akan menonaktifkan tombol dan input
+
+    try {
+        const formData = new FormData();
+        // Ambil file dari array penyimpanan kita
+        for (let i = 0; i < filesToAnalyze.length; i++) {
+            formData.append('multiFiles', filesToAnalyze[i], filesToAnalyze[i].name);
+        }
+
+        const response = await fetch("/api/analyze/multifile", { method: "POST", body: formData });
+        removeLoadingMessage();
+        if (!response.ok) throw await createErrorFromResponse(response, "Gagal analisis file");
+
+        const data = await response.json();
+        appendMessage("Bot", `${data.message || `Hasil analisis ${filesToAnalyze.length} file`}:\n${data.analysis}`, "bot");
+
+        // ** Penting: Kosongkan daftar setelah berhasil **
+        clearSelectedFiles(); // Reset setelah sukses
+
+    } catch (error) {
+        removeLoadingMessage();
+        console.error("Analyze multiple files error:", error);
+        appendMessage("Bot", `Kesalahan analisis file: ${error.message || 'Gagal menghubungi server'}`, "bot error");
+        // Pertimbangkan apakah akan mengosongkan daftar jika gagal? Tergantung UX yang diinginkan.
+        // Mungkin biarkan saja agar pengguna bisa mencoba lagi tanpa memilih ulang.
+        // Jika ingin dikosongkan juga saat gagal: clearSelectedFiles();
+    } finally {
+        // Hanya perlu re-enable tombol/input, tidak perlu reset input value di sini
+        // karena sudah di-handle oleh handleFileSelection dan clearSelectedFiles
+        setLoading(false);
+         // Pastikan state tombol analisis sesuai setelah proses selesai
+         analyzeMultiFileButton.disabled = accumulatedFiles.length === 0;
+    }
+}
+
+
+// *** AKHIR FUNGSI BARU ***
+
 
 // ---- UI Helper Functions ----
 
@@ -185,10 +329,13 @@ function setLoading(isLoading) {
     uploadButton.disabled = isLoading;
     folderInput.disabled = isLoading;
     analyzeFolderButton.disabled = isLoading;
+    multiFileInput.disabled = isLoading;
+    analyzeMultiFileButton.disabled = isLoading || accumulatedFiles.length === 0; // Disable jika loading atau tidak ada file
+    clearMultiFileButton.disabled = isLoading; // Disable tombol clear saat loading
 
     const placeholder = isLoading
-        ? "Menunggu balasan..."
-        : "Ketik pesan atau tempel kode... (Shift+Enter untuk mengirim)";
+        ? "Waiting for response..."
+        : "Type a message or paste the code... (Shift+Enter for sending message)";
     userInput.placeholder = placeholder;
 
     if (!isLoading) {
@@ -238,11 +385,20 @@ userInput.addEventListener("keydown", function(event) {
     }
 });
 
+// ** BARU: Tambahkan event listener untuk input multi-file **
+multiFileInput.addEventListener('change', handleFileSelection);
+
+// Panggil update display saat halaman pertama kali dimuat (untuk set state awal)
+document.addEventListener('DOMContentLoaded', () => {
+    updateSelectedFilesDisplay();
+});
+
 // Auto-resize textarea
 userInput.addEventListener('input', () => {
     userInput.style.height = 'auto'; // Reset agar bisa menyusut
     userInput.style.height = (userInput.scrollHeight + 2) + 'px'; // Sesuaikan dengan konten
 });
+
 
 // Auto-scroll saat window resize (jika chatbox di bawah)
 window.addEventListener('resize', scrollToBottom);
