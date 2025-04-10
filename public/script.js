@@ -80,7 +80,7 @@ async function uploadZip() {
         const formData = new FormData();
         formData.append("file", file); // Nama field 'file' harus cocok dg server
 
-        const response = await fetch("/api/upload", { method: "POST", body: formData });
+        const response = await fetch("/api/analyze/zip", { method: "POST", body: formData });
         removeLoadingMessage();
         if (!response.ok) throw await createErrorFromResponse(response, "Gagal unggah ZIP");
 
