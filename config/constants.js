@@ -9,12 +9,12 @@ const constants = {
     API_KEY: process.env.GOOGLE_API_KEY,
     UPLOAD_DIR: path.join(__dirname, '../uploads'), // Path absolut dari root proyek
     PUBLIC_DIR: path.join(__dirname, '../public'),   // Path absolut ke folder public
-    EXTRACTION_TIMEOUT: 60000, // ms
+    EXTRACTION_TIMEOUT: 100000, // ms
     API_TIMEOUT: 180000,      // ms
-    MAX_HISTORY_LENGTH: 50,
-    MAX_FILES_IN_FOLDER: 100,
-    MAX_FILE_SIZE_MB: 20,
-    ZIP_MAX_SIZE_MB: 100,
+    MAX_HISTORY_LENGTH: 10000000000,
+    MAX_FILES_IN_FOLDER: 10000,
+    MAX_FILE_SIZE_MB: 500,
+    ZIP_MAX_SIZE_MB: 500,
     ALLOWED_EXTENSIONS: [
         ".js", ".jsx", ".ts", ".tsx", ".html", ".htm", ".css", ".scss",
         ".sass", ".less", ".php", ".py", ".java", ".cs", ".go", ".rb",

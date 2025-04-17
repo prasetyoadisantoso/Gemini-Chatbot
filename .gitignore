@@ -5,6 +5,7 @@
 .env
 .env.*
 !.env.example
+chat_history.db
 
 # Temporary Uploads and Extractions
 # Direktori ini berisi file sementara yang diunggah pengguna atau hasil ekstraksi.

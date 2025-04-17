@@ -32,9 +32,24 @@ async function fetchWithTimeout(fetchFn, url, options, timeout) {
     });
 }
 
+// Fungsi untuk menyimpan pesan ke database
+async function saveChatMessage(db, sessionId, role, content) {
+    console.log(`Menyimpan pesan ke chat_history: sessionId=${sessionId}, role=${role}, content=${content.substring(0,50)}...`);
+    return new Promise((resolve, reject) => {
+        db.run(`INSERT INTO chat_history (session_id, role, content) VALUES (?, ?, ?)`, [sessionId, role, content], (err) => {
+            if (err) {
+                console.error("Gagal menyimpan pesan:", err);
+                reject(err);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
 
 // Mengelola histori chat dalam session
-function manageHistory(session, userContent, modelContent) {
+async function manageHistory(session, userContent, modelContent, db) {
     if (!session) {
         console.error("Error: Session object is undefined in manageHistory.");
         return; // Hindari error jika session tidak ada
@@ -51,6 +66,16 @@ function manageHistory(session, userContent, modelContent) {
     if (modelContent) {
         session.history.push({ role: 'model', content: modelContent });
     }
+
+    // Simpan ke database
+    const sessionId = session.id;
+    if (userContent) {
+        await saveChatMessage(db, sessionId, 'user', userContent);
+    }
+    if (modelContent) {
+        await saveChatMessage(db, sessionId, 'model', modelContent);
+    }
+
 
     // Potong histori jika terlalu panjang (FIFO)
     // Lakukan pemotongan *sebelum* menambahkan elemen baru jika sudah mencapai batas

@@ -7,6 +7,7 @@ const fs = require("fs");
 const constants = require('./config/constants'); // Import constants
 const setupSession = require('./config/session'); // Import session setup
 const mainRouter = require('./routes'); // Import main router (jika pakai routes/index.js)
+const sqlite3 = require('sqlite3').verbose();
 // Atau import router individual:
 // const chatRouter = require('./routes/chat');
 // const analysisRouter = require('./routes/analysis');
@@ -25,6 +26,54 @@ import('node-fetch').then(module => {
 }).catch(err => {
     console.error("KESALAHAN FATAL: Gagal mengimpor node-fetch:", err);
     process.exit(1);
+});
+
+// --- Database Initialization ---
+const dbPath = path.join(__dirname, 'chat_history.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error("KESALAHAN FATAL: Gagal membuka/membuat database SQLite:", err);
+        process.exit(1);
+    }
+    console.log('Database SQLite terhubung.');
+
+    // server.js
+    db.run(`
+    CREATE TABLE IF NOT EXISTS chat_history (
+        session_id TEXT NOT NULL,
+        turn_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`, (err) => {
+        if (err) {
+            console.error("KESALAHAN FATAL: Gagal membuat tabel chat_history:", err);
+            process.exit(1);
+        }
+        console.log('Tabel chat_history siap.');
+    });
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS files (
+            file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_content TEXT NOT NULL,
+            metadata TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (err) {
+            console.error("KESALAHAN FATAL: Gagal membuat tabel files:", err);
+            process.exit(1);
+        }
+        console.log('Tabel files siap.');
+    });
+
+    // *** Simpan instance database ke aplikasi Express ***
+    app.set('db', db);
+    console.log('Instance database disimpan ke aplikasi Express.');
 });
 
 const app = express();
@@ -65,7 +114,7 @@ try {
         fs.mkdirSync(constants.UPLOAD_DIR, { recursive: true });
         console.log(`Direktori upload dibuat: ${constants.UPLOAD_DIR}`);
     } else {
-         console.log(`Direktori upload sudah ada: ${constants.UPLOAD_DIR}`);
+        console.log(`Direktori upload sudah ada: ${constants.UPLOAD_DIR}`);
     }
 } catch (error) {
     console.error(`KESALAHAN FATAL: Gagal membuat/mengakses direktori ${constants.UPLOAD_DIR}:`, error);
@@ -119,9 +168,9 @@ function startServer() {
         console.log(`  Mode: ${process.env.NODE_ENV || 'development'}`);
         console.log(`===============================================\n`);
     }).on('error', (err) => {
-         // Tangani error jika port sudah digunakan, dll.
-         console.error(`KESALAHAN FATAL saat memulai server di port ${constants.PORT}:`, err.message);
-         process.exit(1);
+        // Tangani error jika port sudah digunakan, dll.
+        console.error(`KESALAHAN FATAL saat memulai server di port ${constants.PORT}:`, err.message);
+        process.exit(1);
     });
 }
 
