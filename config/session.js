@@ -17,6 +17,10 @@ function setupSession(app) {
             httpOnly: true,
             maxAge: 1000 * 60 * 60 * 2, // 2 jam
             sameSite: 'lax'
+        },
+        genid: (req) => {
+            // Gunakan session ID dari environment variable, jika ada
+            return process.env.SESSION_ID || require('crypto').randomBytes(16).toString('hex'); // Default ke random
         }
         // Pertimbangkan store persisten (e.g., connect-redis) untuk production
     }));
