@@ -1,6 +1,6 @@
 // routes/chat.js
 const express = require('express');
-const { callGeminiAPI, initializeGeminiService } = require('../services/gemini');
+const { callGeminiAPI } = require('../services/gemini');
 const { manageHistory } = require('../utils/helpers');
 const router = express.Router();
 
